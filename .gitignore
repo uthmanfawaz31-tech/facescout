@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Cookies and session data (keep user credentials private!)
+cookies/*
+!cookies/.gitkeep
+data/*
+!data/.gitkeep
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

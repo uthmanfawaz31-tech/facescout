@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreamScout • Facebook IPTV & Streaming Lead Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background-color: #0B0F19; color: #E2E8F0; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .card-glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .glow-accent { box-shadow: 0 0 25px -5px rgba(59, 130, 246, 0.25); }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #0F172A; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    .tag-badge { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #93C5FD; }
+  </style>
+</head>
+<body class="min-h-screen custom-scrollbar pb-16">
+
+  <!-- Navbar -->
+  <header class="card-glass border-b border-gray-800 sticky top-0 z-50 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+          <i class="fa-solid fa-satellite-dish text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            StreamScout <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-semibold border border-blue-500/30">PRO</span>
+          </h1>
+          <p class="text-xs text-gray-400">Facebook Stealth IPTV & Streaming Lead Extractor</p>
+        </div>
+      </div>
+
+      <!-- Quick Stats & Top Actions -->
+      <div class="flex items-center flex-wrap gap-3">
+        <div class="flex items-center space-x-2 bg-gray-900/80 px-3 py-1.5 rounded-lg border border-gray-800 text-xs">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="status-dot"></span>
+          <span class="text-gray-400">Status:</span>
+          <span class="font-semibold text-white" id="status-text">Idle</span>
+        </div>
+        
+        <div class="flex items-center space-x-2 bg-gray-900/80 px-3 py-1.5 rounded-lg border border-gray-800 text-xs">
+          <span class="text-gray-400">Total Leads:</span>
+          <span class="font-bold text-blue-400 text-sm" id="stat-total-leads">0</span>
+        </div>
+
+        <button onclick="openLoginBrowser()" class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs text-gray-200 border border-gray-700 flex items-center gap-1.5 transition">
+          <i class="fa-brands fa-facebook text-blue-400"></i> FB Session Login
+        </button>
+
+        <a href="/api/export/csv" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium flex items-center gap-1.5 shadow transition">
+          <i class="fa-solid fa-file-csv"></i> Export CSV
+        </a>
+
+        <button onclick="clearAllLeads()" class="px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-red-950/40 text-xs text-gray-400 hover:text-red-400 border border-gray-700 transition" title="Clear Leads">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-6 mt-8 space-y-8">
+
+    <!-- Overview Banner: Facebook Outreach Bypass Strategy -->
+    <div class="card-glass rounded-2xl p-5 border-l-4 border-blue-500 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">Bypass 1-Message Limit</span>
+          <h2 class="text-sm md:text-base font-semibold text-white">Direct Social & WhatsApp Extraction Active</h2>
+        </div>
+        <p class="text-xs text-gray-400">
+          Facebook limits outbound DMs to 1 message every 24 hours. StreamScout scans stealth keywords (<code class="text-blue-300">m3u</code>, <code class="text-blue-300">firestick</code>, <code class="text-blue-300">xtream code</code>, <code class="text-blue-300">tivimate</code>) to find high-intent prospects and extracts their direct <b>WhatsApp</b>, <b>Telegram</b>, or <b>Discord</b> handles.
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="switchTab('paste')" class="px-3 py-2 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 text-xs font-medium whitespace-nowrap transition">
+          <i class="fa-solid fa-paste mr-1"></i> Quick Paste Ingest
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex border-b border-gray-800 space-x-2 text-sm overflow-x-auto custom-scrollbar">
+      <button onclick="switchTab('auto')" id="tab-btn-auto" class="tab-btn active px-4 py-3 border-b-2 border-blue-500 font-semibold text-white flex items-center gap-2">
+        <i class="fa-solid fa-robot text-blue-400"></i> Auto Browser Scout
+      </button>
+      <button onclick="switchTab('links')" id="tab-btn-links" class="tab-btn px-4 py-3 border-b-2 border-transparent font-medium text-gray-400 hover:text-gray-200 flex items-center gap-2">
+        <i class="fa-solid fa-link text-indigo-400"></i> In-Group Search Generator
+      </button>
+      <button onclick="switchTab('paste')" id="tab-btn-paste" class="tab-btn px-4 py-3 border-b-2 border-transparent font-medium text-gray-400 hover:text-gray-200 flex items-center gap-2">
+        <i class="fa-solid fa-clipboard-check text-emerald-400"></i> Instant Paste / Ban-Proof
+      </button>
+      <button onclick="switchTab('keywords')" id="tab-btn-keywords" class="tab-btn px-4 py-3 border-b-2 border-transparent font-medium text-gray-400 hover:text-gray-200 flex items-center gap-2">
+        <i class="fa-solid fa-tags text-amber-400"></i> Stealth Keywords (<span id="kw-count">0</span>)
+      </button>
+      <button onclick="switchTab('telegram')" id="tab-btn-telegram" class="tab-btn px-4 py-3 border-b-2 border-transparent font-medium text-gray-400 hover:text-gray-200 flex items-center gap-2">
+        <i class="fa-brands fa-telegram text-sky-400"></i> Mobile Telegram Bot
+      </button>
+    </div>
+
+    <!-- Tab 1: Auto Browser Scout -->
+    <section id="tab-content-auto" class="tab-content space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Control Card -->
+        <div class="card-glass rounded-2xl p-6 lg:col-span-2 space-y-5">
+          <div class="space-y-1">
+            <h3 class="text-base font-semibold text-white flex items-center gap-2">
+              <i class="fa-brands fa-facebook text-blue-500"></i> Scout Facebook Group
+            </h3>
+            <p class="text-xs text-gray-400">Enter any public or private group link. The bot searches using stealth keywords and extracts contact details.</p>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-gray-300 mb-1.5">Facebook Group URL</label>
+              <div class="relative">
+                <input type="text" id="auto-group-url" placeholder="https://www.facebook.com/groups/firestickstreamers or group ID" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition">
+                <button onclick="pasteToInput('auto-group-url')" class="absolute right-3 top-3 text-xs text-gray-400 hover:text-white bg-gray-800 px-2 py-1 rounded">Paste</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-gray-300 mb-1.5">Max Posts to Scan</label>
+                <input type="number" id="auto-max-posts" value="30" min="5" max="100" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+              </div>
+              <div class="flex items-center pt-6">
+                <label class="flex items-center space-x-2 text-xs text-gray-300 cursor-pointer">
+                  <input type="checkbox" id="auto-deep-bio" class="rounded bg-gray-900 border-gray-700 text-blue-600 focus:ring-0">
+                  <span>Deep Profile Bio Scan</span>
+                </label>
+              </div>
+              <div class="flex items-center pt-6">
+                <label class="flex items-center space-x-2 text-xs text-gray-300 cursor-pointer">
+                  <input type="checkbox" id="auto-headless" checked class="rounded bg-gray-900 border-gray-700 text-blue-600 focus:ring-0">
+                  <span>Headless (Silent Mode)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+              <button onclick="startScouting()" id="btn-start-scout" class="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition">
+                <i class="fa-solid fa-play"></i> Start Group Scouting
+              </button>
+              <button onclick="stopScouting()" id="btn-stop-scout" class="py-3 px-5 rounded-xl bg-gray-800 hover:bg-red-900/40 text-gray-300 hover:text-red-400 border border-gray-700 font-semibold text-sm transition hidden">
+                <i class="fa-solid fa-stop"></i> Stop
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Activity Log -->
+        <div class="card-glass rounded-2xl p-5 flex flex-col h-[320px]">
+          <div class="flex items-center justify-between border-b border-gray-800 pb-2 mb-3">
+            <span class="text-xs font-semibold text-gray-300 flex items-center gap-2">
+              <i class="fa-solid fa-terminal text-blue-400"></i> Live Console Output
+            </span>
+            <span class="text-[10px] text-gray-500" id="log-count">0 messages</span>
+          </div>
+          <div id="console-logs" class="flex-1 overflow-y-auto space-y-1.5 font-mono text-[11px] text-gray-400 custom-scrollbar pr-2">
+            <div>[System] Ready. Enter a Facebook group link to begin.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: In-Group Search Generator -->
+    <section id="tab-content-links" class="tab-content hidden space-y-6">
+      <div class="card-glass rounded-2xl p-6 space-y-4">
+        <div class="space-y-1">
+          <h3 class="text-base font-semibold text-white flex items-center gap-2">
+            <i class="fa-solid fa-bolt text-indigo-400"></i> Instant Facebook In-Group Stealth Search Generator
+          </h3>
+          <p class="text-xs text-gray-400">
+            Clicking these generated links allows you to browse posts in the group filtered exclusively by each keyword (e.g. firestick, m3u, tivimate). This lets you target live buyers instantly directly in your own regular browser!
+          </p>
+        </div>
+
+        <div class="flex gap-3">
+          <input type="text" id="links-group-url" placeholder="https://www.facebook.com/groups/example_group/" class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500">
+          <button onclick="generateSearchLinks()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow flex items-center gap-2 transition">
+            <i class="fa-solid fa-arrows-rotate"></i> Generate Links
+          </button>
+        </div>
+
+        <!-- Generated Links Grid -->
+        <div id="search-links-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+          <p class="text-xs text-gray-500 col-span-full">Enter group link above and click "Generate Links".</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Instant Paste / Zero-Ban Inspector -->
+    <section id="tab-content-paste" class="tab-content hidden space-y-6">
+      <div class="card-glass rounded-2xl p-6 space-y-4">
+        <div class="space-y-1">
+          <h3 class="text-base font-semibold text-white flex items-center gap-2">
+            <i class="fa-solid fa-clipboard-list text-emerald-400"></i> Ban-Proof Instant Paste Ingest
+          </h3>
+          <p class="text-xs text-gray-400">
+            Browsing Facebook on your phone or PC? Simply copy the text of any post or comment section and paste it below. StreamScout will instantly extract all WhatsApp numbers, Telegram usernames, Discord tags, and IPTV buyer intent!
+          </p>
+        </div>
+
+        <textarea id="paste-input" rows="7" placeholder="Paste Facebook group post or comments text here...
+Example:
+'John Doe: Hey guys, my provider went down on my firestick. Anyone have a good m3u playlist or xtream code recommendation? Reach me on whatsapp +447911122233 or tg @streamfan'" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 transition font-mono"></textarea>
+
+        <div class="flex justify-between items-center pt-1">
+          <span class="text-xs text-gray-500">Supports posts, comment dumps, and copied raw HTML.</span>
+          <button onclick="submitPastedContent()" class="py-2.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Extract Contacts & Intent Now
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 4: Stealth Keywords Manager -->
+    <section id="tab-content-keywords" class="tab-content hidden space-y-6">
+      <div class="card-glass rounded-2xl p-6 space-y-4">
+        <div class="flex justify-between items-center">
+          <div class="space-y-1">
+            <h3 class="text-base font-semibold text-white flex items-center gap-2">
+              <i class="fa-solid fa-shield-halved text-amber-400"></i> Stealth Keyword Filter Matrix
+            </h3>
+            <p class="text-xs text-gray-400">
+              Facebook restricts and shadows the direct word "iptv". We scan these compliant hardware, app, and protocol alternatives instead.
+            </p>
+          </div>
+          <button onclick="saveKeywords()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-xs font-semibold rounded-xl text-white transition">Save Changes</button>
+        </div>
+
+        <div class="flex gap-2">
+          <input type="text" id="new-keyword-input" placeholder="Add custom stealth keyword (e.g. ibo player, mag box)" class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+          <button onclick="addKeyword()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-xl text-xs font-semibold text-white transition">+ Add</button>
+        </div>
+
+        <div id="keywords-container" class="flex flex-wrap gap-2 pt-2">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 5: Mobile Telegram Bot -->
+    <section id="tab-content-telegram" class="tab-content hidden space-y-6">
+      <div class="card-glass rounded-2xl p-6 space-y-4 max-w-2xl">
+        <div class="space-y-1">
+          <h3 class="text-base font-semibold text-white flex items-center gap-2">
+            <i class="fa-brands fa-telegram text-sky-400"></i> Telegram Scout Bot Integration
+          </h3>
+          <p class="text-xs text-gray-400">
+            Control StreamScout directly from your phone via Telegram. Send any group link or paste post text to your bot, and it instantly sends back formatted lead cards with 1-click WhatsApp and Telegram chat buttons.
+          </p>
+        </div>
+
+        <div class="space-y-3 pt-2">
+          <label class="block text-xs font-medium text-gray-300">Telegram Bot Token (from @BotFather)</label>
+          <input type="password" id="tg-bot-token" placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
+          <div class="flex gap-3">
+            <button onclick="connectTelegramBot()" class="py-2.5 px-5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs transition flex items-center gap-2">
+              <i class="fa-solid fa-plug"></i> Connect Telegram Bot
+            </button>
+            <button onclick="disconnectTelegramBot()" class="py-2.5 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs transition">
+              Disconnect
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Leads Results Section -->
+    <section class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-800 pb-4">
+        <div class="space-y-0.5">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            Discovered Streaming Leads <span class="text-xs font-normal text-gray-400">(<span id="filtered-lead-count">0</span> matching)</span>
+          </h2>
+          <p class="text-xs text-gray-400">Click direct contact buttons to initiate outreach via WhatsApp, Telegram, or Discord.</p>
+        </div>
+
+        <!-- Filters & Search -->
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Intent Filter -->
+          <select id="filter-intent" onchange="renderLeads()" class="bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none">
+            <option value="ALL">All Intents</option>
+            <option value="REQUESTING">🔥 Asking to Buy / Providers Only</option>
+            <option value="DISCUSSING">💬 Discussion & Tech Setup</option>
+            <option value="SELLER">📢 Competitor Promoters</option>
+          </select>
+
+          <!-- Contact Channel Filter -->
+          <select id="filter-contact" onchange="renderLeads()" class="bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none">
+            <option value="ALL">All Contacts</option>
+            <option value="HAS_WHATSAPP">Has WhatsApp</option>
+            <option value="HAS_TELEGRAM">Has Telegram</option>
+            <option value="HAS_ANY">Has Any Direct Contact</option>
+          </select>
+
+          <!-- Search Input -->
+          <input type="text" id="lead-search-query" oninput="renderLeads()" placeholder="Search name, phone, handle..." class="bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none">
+        </div>
+      </div>
+
+      <!-- Leads Grid / Container -->
+      <div id="leads-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="col-span-full card-glass rounded-2xl p-12 text-center text-gray-500 space-y-2">
+          <i class="fa-solid fa-users-viewfinder text-3xl text-gray-600 mb-2"></i>
+          <p class="text-sm font-medium">No leads captured yet</p>
+          <p class="text-xs text-gray-500 max-w-md mx-auto">
+            Start a group scout session above or paste Facebook comments to immediately extract verified WhatsApp numbers and Telegram handles.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Quick Outreach Modal -->
+  <div id="outreach-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="card-glass rounded-2xl max-w-lg w-full p-6 space-y-4 border border-gray-700">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-base font-semibold text-white flex items-center gap-2">
+          <i class="fa-solid fa-paper-plane text-blue-400"></i> Outreach Pitch Generator
+        </h3>
+        <button onclick="closeOutreachModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="space-y-3">
+        <p class="text-xs text-gray-400">
+          Personalized pitch tailored for <b id="outreach-lead-name" class="text-white">User</b> based on their request:
+        </p>
+
+        <textarea id="outreach-message" rows="5" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-gray-200 font-sans focus:outline-none"></textarea>
+
+        <div class="flex gap-2">
+          <button onclick="copyOutreachText()" class="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-copy"></i> Copy Pitch
+          </button>
+          <a id="outreach-wa-btn" href="#" target="_blank" class="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white transition flex items-center gap-1.5 hidden">
+            <i class="fa-brands fa-whatsapp"></i> Send via WhatsApp
+          </a>
+          <a id="outreach-tg-btn" href="#" target="_blank" class="py-2 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-xs font-semibold text-white transition flex items-center gap-1.5 hidden">
+            <i class="fa-brands fa-telegram"></i> Send via Telegram
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
