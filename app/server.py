@@ -10,13 +10,13 @@ from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from app.config import DEFAULT_KEYWORDS, STATIC_DIR, DATA_DIR
+from app.config import DEFAULT_KEYWORDS, STATIC_DIR, DATA_DIR, COOKIES_DIR
 from app.models import Lead, ScrapeRequest, PasteScoutRequest, ScoutStatus
 from app.extractor import LeadExtractor
 from app.fb_scraper import FacebookGroupScraper
 from app.telegram_bot import TelegramScoutBot
 
-app = FastAPI(title="Facebook IPTV Social Scout Platform", version="1.0.0")
+app = FastAPI(title="StreamScout - Facebook IPTV & Streaming Lead Engine", version="1.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,9 +30,10 @@ app.add_middleware(
 state = {
     "is_active": False,
     "current_action": "Idle",
+    "last_error": None,
     "posts_scanned": 0,
     "comments_scanned": 0,
-    "logs": ["Platform initialized. Ready to scout Facebook groups."],
+    "logs": ["StreamScout Engine Ready."],
     "leads": [],
     "keywords": list(DEFAULT_KEYWORDS),
     "telegram_bot": None,
@@ -41,12 +42,36 @@ state = {
 
 def add_log(msg: str):
     state["logs"].append(msg)
-    if len(state["logs"]) > 200:
+    if len(state["logs"]) > 250:
         state["logs"].pop(0)
 
-# Mount static folder
+# Mount directories
 os.makedirs(STATIC_DIR, exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(COOKIES_DIR, exist_ok=True)
+
+@app.get("/api/session/status")
+async def get_session_status():
+    scraper = FacebookGroupScraper()
+    is_saved = scraper.is_session_saved()
+    return {
+        "is_authenticated": is_saved,
+        "status_label": "Authenticated & Ready" if is_saved else "Not Authenticated (Login Recommended)"
+    }
+
+@app.post("/api/session/cookies")
+async def save_cookies_endpoint(payload: dict):
+    raw_cookies = payload.get("cookies", "").strip()
+    if not raw_cookies:
+        raise HTTPException(status_code=400, detail="Cookie content is empty.")
+    
+    scraper = FacebookGroupScraper(log_callback=add_log)
+    success = scraper.save_raw_cookies(raw_cookies)
+    if success:
+        add_log("Facebook session cookies saved successfully via dashboard.")
+        return {"status": "success", "message": "Cookies saved successfully!"}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid cookie format. Provide 'c_user=...; xs=...' or JSON array.")
 
 @app.get("/api/keywords")
 async def get_keywords():
@@ -67,7 +92,7 @@ async def generate_search_links(payload: dict):
     scraper = FacebookGroupScraper()
     group_id = scraper.extract_group_id_or_name(group_url)
     if not group_id:
-        raise HTTPException(status_code=400, detail="Invalid Facebook Group URL")
+        raise HTTPException(status_code=400, detail="Invalid Facebook Group URL or ID")
     
     links = scraper.build_group_search_urls(group_url, state["keywords"])
     return {"group_id": group_id, "links": links}
@@ -79,7 +104,6 @@ async def scout_pasted_content(req: PasteScoutRequest):
     leads = scraper.parse_pasted_content(req.text_or_html, group_url=req.group_url)
     
     for lead in leads:
-        # Check duplicate
         if not any(l.raw_text == lead.raw_text for l in state["leads"]):
             state["leads"].insert(0, lead)
             
@@ -89,11 +113,12 @@ async def scout_pasted_content(req: PasteScoutRequest):
 async def run_browser_scout_task(req: ScrapeRequest):
     state["is_active"] = True
     state["current_action"] = "Initializing browser..."
-    add_log(f"Starting browser scout on: {req.group_url}")
+    state["last_error"] = None
+    add_log(f"🚀 Starting group scout: {req.group_url}")
 
     def on_lead(lead: Lead):
         state["leads"].insert(0, lead)
-        add_log(f"🎯 NEW LEAD: {lead.author_name} ({lead.intent}) - Contacts: WA:{len(lead.contacts.whatsapp)}, TG:{len(lead.contacts.telegram)}")
+        add_log(f"🎯 NEW LEAD: {lead.author_name} ({lead.intent}) - WA:{len(lead.contacts.whatsapp)} TG:{len(lead.contacts.telegram)}")
 
     extractor = LeadExtractor(req.keywords or state["keywords"])
     scraper = FacebookGroupScraper(extractor=extractor, log_callback=add_log)
@@ -109,12 +134,18 @@ async def run_browser_scout_task(req: ScrapeRequest):
             headless=req.headless,
             on_lead_found=on_lead
         )
-        add_log(f"Scout session finished. Total new leads: {len(leads)}")
+        if len(leads) == 0:
+            state["current_action"] = "Completed (0 leads found - Check logs if login was required)"
+            add_log("Scan finished with 0 leads. If Facebook prompted for login, please use 'FB Session Login' or paste your cookies.")
+        else:
+            state["current_action"] = f"Completed ({len(leads)} leads captured)"
+            add_log(f"🎉 Scout session finished! Total new leads: {len(leads)}")
     except Exception as e:
-        add_log(f"Scout session failed with error: {str(e)}")
+        state["last_error"] = str(e)
+        state["current_action"] = f"Error: {str(e)[:40]}"
+        add_log(f"❌ Scout session failed with error: {str(e)}")
     finally:
         state["is_active"] = False
-        state["current_action"] = "Idle"
 
 @app.post("/api/scout/start")
 async def start_scout(req: ScrapeRequest, background_tasks: BackgroundTasks):
@@ -135,9 +166,13 @@ async def stop_scout():
 
 @app.get("/api/scout/status")
 async def get_status():
+    scraper = FacebookGroupScraper()
+    is_saved = scraper.is_session_saved()
     return {
         "is_active": state["is_active"],
         "current_action": state["current_action"],
+        "last_error": state["last_error"],
+        "is_authenticated": is_saved,
         "leads_count": len(state["leads"]),
         "logs": state["logs"][-40:],
         "leads": state["leads"]
@@ -147,7 +182,7 @@ async def get_status():
 async def trigger_browser_login(background_tasks: BackgroundTasks):
     scraper = FacebookGroupScraper(log_callback=add_log)
     background_tasks.add_task(scraper.open_login_browser)
-    return {"status": "success", "message": "Visible browser launched for Facebook login."}
+    return {"status": "success", "message": "Visible Chrome launched! Please log in to Facebook in that window."}
 
 @app.post("/api/telegram/start")
 async def start_telegram_bot(payload: dict, background_tasks: BackgroundTasks):
@@ -231,4 +266,4 @@ async def serve_dashboard():
     if os.path.exists(index_path):
         with open(index_path, "r", encoding="utf-8") as f:
             return f.read()
-    return "<h1>Facebook Scout Dashboard: static/index.html not found</h1>"
+    return "<h1>StreamScout: static/index.html not found</h1>"

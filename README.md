@@ -18,93 +18,40 @@ A specialized scouting platform designed to bypass Facebook's 1-message-per-24h 
 
 ---
 
-## 🚀 Key Features
+## 🔑 Facebook Session & Authentication (Important!)
 
-1. **Multi-Mode Lead Discovery:**
-   - **Mode 1: Automated Browser Scouting:** Playwright-powered stealth browser logs into Facebook groups, searches targeted keywords, scrolls discussion feeds, and extracts leads in real time.
-   - **Mode 2: In-Group Stealth Search Generator:** Generates 1-click search URLs for any group, letting you browse keyword-filtered posts directly in your browser.
-   - **Mode 3: Ban-Proof Quick Paste Ingest:** Copy posts or comment sections from your mobile phone or PC and paste them into the dashboard for instantaneous contact & intent extraction.
-   - **Mode 4: Mobile Telegram Bot:** Connect your own Telegram bot token to control StreamScout and receive lead notifications directly on your phone.
-2. **AI Intent Classification:**
-   - 🔥 **`REQUESTING` (Hot Buyer Leads):** People asking for recommendations, providers, playlists, test lines, or free trials.
-   - 💬 **`DISCUSSING`:** People troubleshooting devices (Firestick buffering, Smart TV apps, audio sync).
-   - 📢 **`SELLER`:** Competitors and sellers (automatically flagged so you don't waste time outreach).
-3. **1-Click Outreach Generator:**
-   - Generates personalized pitches tailored to what the lead asked for.
-   - Direct `Chat on WhatsApp` (`https://wa.me/...`) and `Open in Telegram` (`https://t.me/...`) buttons.
-4. **Export to CSV / JSON:**
-   - One-click export with full contact lists ready for CRM or bulk outreach.
+Facebook strictly locks group discussions and in-group searches behind login. If you start a scan without an active session, Facebook redirects to the login screen and 0 leads will be captured.
+
+StreamScout gives you **3 easy ways** to authenticate or bypass this:
+
+### 1. In-Browser Console Grabber (Easiest & 100% Ban-Proof)
+If you already browse Facebook in your daily browser (Chrome, Edge, Brave), you are already logged in!
+1. Open any Facebook group in your browser and scroll down a few times.
+2. Press `F12` on your keyboard (or Right Click → Inspect → Click "Console").
+3. Copy the 1-line snippet from the **"In-Browser Grabber"** tab on StreamScout and paste it into the console.
+4. Press Enter. All leads from your current screen immediately send to your StreamScout dashboard!
+
+### 2. Fast Cookie Paste (5 Seconds)
+1. On the dashboard header, click **"Connect FB Cookies"**.
+2. Paste your Facebook cookie string (`c_user=...; xs=...`) or export from the "EditThisCookie" / "Cookie-Editor" extension.
+3. Click Save. The engine is authenticated permanently on your machine.
+
+### 3. Log In via Real Chrome
+1. Click **"Log In via Visible Chrome"** in the top warning banner.
+2. A visible Chrome window will launch.
+3. Log into Facebook. Once logged in, close the window. Your session cookies are automatically captured and saved.
 
 ---
 
-## 🛠️ Installation & Setup
+## 🚀 How to Run
 
-### Prerequisites
-- Python 3.10+
-- Google Chrome installed (optional, for visible browser login)
+In the project folder, start the platform:
 
-### 1. Launch the Platform
-In the project directory, run:
-
-```bash
+```powershell
 python run.py
 ```
 
-Open your browser and navigate to:
+Open your browser at:
 ```
 http://127.0.0.1:8000
-```
-
----
-
-## 📖 How to Use
-
-### Step 1: Facebook Session Login (Optional but Recommended)
-1. On the dashboard header, click **"FB Session Login"**.
-2. A visible Chrome window will open.
-3. Log into your Facebook account once.
-4. Close the browser window. Your session cookies are securely saved in `cookies/browser_profile` and will be reused for all future scans.
-
-### Step 2: Scout a Facebook Group
-1. Copy any Facebook Group link (e.g., `https://www.facebook.com/groups/firestickstreamers/`).
-2. Paste it into the **"Facebook Group URL"** field.
-3. Choose post scan count (e.g. 30).
-4. Click **"Start Group Scouting"**.
-5. StreamScout will scan in-group search results for each stealth keyword, extract posts and comments, classify intent, and display discovered leads.
-
-### Step 3: Direct Outreach
-1. For any discovered lead, check their direct contact badge:
-   - Green badge: **WhatsApp (`+...`)**
-   - Blue badge: **Telegram (`@username`)**
-   - Purple badge: **Discord**
-2. Click **"Generate Outreach Pitch"** to copy a tailored message or click **"Chat on WhatsApp"** to open a direct chat instantly!
-
-### Step 4: Mobile Telegram Bot (Optional)
-1. Message `@BotFather` on Telegram and create a bot (`/newbot`) to get a token.
-2. Go to the **Mobile Telegram Bot** tab in StreamScout and paste your token.
-3. Click **"Connect Telegram Bot"**.
-4. Now you can forward group links or paste comments in Telegram, and the bot will reply with rich lead cards on your phone.
-
----
-
-## 📁 Project Architecture
-
-```
-facebook scouting/
-├── app/
-│   ├── __init__.py
-│   ├── config.py           # Stealth keywords, regex patterns, device lists
-│   ├── models.py           # Pydantic schemas (Lead, ContactInfo, Status)
-│   ├── extractor.py        # Contact parser (WA, TG, Discord, Email, Phone) + Intent classifier
-│   ├── fb_scraper.py       # Playwright browser automation & stealth scraping
-│   ├── telegram_bot.py     # Telegram Bot integration for mobile use
-│   └── server.py           # FastAPI REST API + Live dashboard endpoints
-├── static/
-│   ├── index.html          # Modern dark-mode responsive dashboard
-│   └── app.js              # Real-time state management, filters, modal handlers
-├── cookies/                # Persistent Chrome user profiles & session cookies
-├── data/                   # Scanned leads storage & exports
-├── requirements.txt        # Python package dependencies
-├── run.py                  # One-command server runner
-└── README.md               # Documentation & usage manual
 ```

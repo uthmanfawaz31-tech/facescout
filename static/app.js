@@ -3,6 +3,7 @@ let appState = {
   leads: [],
   keywords: [],
   isActive: false,
+  isAuthenticated: false,
   pollTimer: null,
   currentTab: 'auto'
 };
@@ -11,6 +12,8 @@ let appState = {
 document.addEventListener('DOMContentLoaded', () => {
   fetchKeywords();
   fetchStatus();
+  fetchSessionStatus();
+  generateBookmarkletSnippet();
   setInterval(fetchStatus, 3000);
 });
 
@@ -31,6 +34,97 @@ function switchTab(tabName) {
     activeBtn.classList.remove('border-transparent', 'text-gray-400');
     activeContent.classList.remove('hidden');
   }
+}
+
+// Session Status Check
+async function fetchSessionStatus() {
+  try {
+    const res = await fetch('/api/session/status');
+    const data = await res.json();
+    appState.isAuthenticated = data.is_authenticated;
+
+    const authDot = document.getElementById('fb-auth-dot');
+    const authText = document.getElementById('fb-auth-text');
+    const warningBanner = document.getElementById('fb-warning-banner');
+
+    if (data.is_authenticated) {
+      if (authDot) authDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+      if (authText) authText.innerText = 'FB Session: Connected';
+      if (warningBanner) warningBanner.classList.add('hidden');
+    } else {
+      if (authDot) authDot.className = 'w-2 h-2 rounded-full bg-amber-500';
+      if (authText) authText.innerText = 'FB Session: Not Logged In';
+      if (warningBanner) warningBanner.classList.remove('hidden');
+    }
+  } catch (err) {
+    console.error('Error fetching session status:', err);
+  }
+}
+
+// Cookie Modal
+function openCookieModal() {
+  document.getElementById('cookie-modal').classList.remove('hidden');
+}
+
+function closeCookieModal() {
+  document.getElementById('cookie-modal').classList.add('hidden');
+}
+
+async function submitCookies() {
+  const cookieText = document.getElementById('cookie-input').value.trim();
+  if (!cookieText) {
+    alert('Please paste your Facebook cookie string or JSON array.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/session/cookies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cookies: cookieText })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('Facebook cookies saved successfully! You are now authenticated.');
+      closeCookieModal();
+      fetchSessionStatus();
+    } else {
+      alert(data.detail || 'Failed to save cookies.');
+    }
+  } catch (err) {
+    alert('Connection error saving cookies.');
+  }
+}
+
+// In-Browser Console Snippet
+function generateBookmarkletSnippet() {
+  const codeBox = document.getElementById('bookmarklet-code');
+  if (!codeBox) return;
+
+  const script = `(async () => {
+  console.log('StreamScout: Scanning current Facebook page...');
+  const nodes = document.querySelectorAll('div[dir="auto"], span[dir="auto"]');
+  const text = Array.from(nodes).map(n => n.innerText).filter(t => t && t.length > 20).join('\\n\\n');
+  try {
+    const res = await fetch('http://127.0.0.1:8000/api/scout/paste', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text_or_html: text, group_url: window.location.href })
+    });
+    const data = await res.json();
+    alert('🎉 StreamScout: Captured ' + data.leads_found + ' leads! Return to your StreamScout dashboard tab to view them.');
+  } catch(e) {
+    alert('Could not connect to StreamScout at http://127.0.0.1:8000. Ensure python run.py is running!');
+  }
+})();`;
+
+  codeBox.value = script;
+}
+
+function copyBookmarkletCode() {
+  const code = document.getElementById('bookmarklet-code').value;
+  navigator.clipboard.writeText(code);
+  alert('Snippet copied! Go to your Facebook group, press F12, paste in Console and press Enter.');
 }
 
 // Fetch Keywords
@@ -100,7 +194,6 @@ async function fetchStatus() {
     appState.isActive = data.is_active;
     appState.leads = data.leads || [];
 
-    // Update UI Indicators
     const statusText = document.getElementById('status-text');
     const statusDot = document.getElementById('status-dot');
     const statTotalLeads = document.getElementById('stat-total-leads');
@@ -110,7 +203,7 @@ async function fetchStatus() {
     if (statTotalLeads) statTotalLeads.innerText = appState.leads.length;
 
     if (appState.isActive) {
-      statusText.innerText = 'Scanning...';
+      statusText.innerText = 'Scanning Group...';
       statusText.className = 'font-semibold text-blue-400';
       statusDot.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping';
       if (btnStart) btnStart.classList.add('hidden');
@@ -142,7 +235,7 @@ async function fetchStatus() {
 async function startScouting() {
   const groupUrl = document.getElementById('auto-group-url').value.trim();
   if (!groupUrl) {
-    alert('Please enter a Facebook Group link!');
+    alert('Please enter a Facebook Group URL or ID!');
     return;
   }
 
@@ -185,8 +278,9 @@ async function openLoginBrowser() {
   try {
     const res = await fetch('/api/browser/login', { method: 'POST' });
     const data = await res.json();
-    alert('Visible Chrome launched! Please log in to Facebook in that window. Once logged in, your session is saved permanently.');
+    alert('Visible Chrome launched! Please log in to Facebook in that window. Once logged in, your session is saved automatically.');
     fetchStatus();
+    fetchSessionStatus();
   } catch (err) {
     alert('Error launching browser.');
   }
@@ -310,15 +404,12 @@ function renderLeads() {
   const searchQuery = (document.getElementById('lead-search-query')?.value || '').toLowerCase();
 
   let filtered = appState.leads.filter(lead => {
-    // Intent filter
     if (intentFilter !== 'ALL' && lead.intent !== intentFilter) return false;
 
-    // Contact filter
     if (contactFilter === 'HAS_WHATSAPP' && (!lead.contacts.whatsapp || lead.contacts.whatsapp.length === 0)) return false;
     if (contactFilter === 'HAS_TELEGRAM' && (!lead.contacts.telegram || lead.contacts.telegram.length === 0)) return false;
     if (contactFilter === 'HAS_ANY' && (!lead.contacts.whatsapp?.length && !lead.contacts.telegram?.length && !lead.contacts.discord?.length)) return false;
 
-    // Search query
     if (searchQuery) {
       const matchName = lead.author_name.toLowerCase().includes(searchQuery);
       const matchText = lead.raw_text.toLowerCase().includes(searchQuery);
@@ -336,14 +427,13 @@ function renderLeads() {
       <div class="col-span-full card-glass rounded-2xl p-12 text-center text-gray-500 space-y-2">
         <i class="fa-solid fa-filter text-2xl text-gray-600 mb-2"></i>
         <p class="text-sm font-medium">No leads match the current filters</p>
-        <p class="text-xs text-gray-500">Try switching filters to 'All' or start a new group scan.</p>
+        <p class="text-xs text-gray-500">Try switching filters to 'All' or run a new group scan.</p>
       </div>
     `;
     return;
   }
 
   container.innerHTML = filtered.map(lead => {
-    // Intent Badge
     let badgeClass = "bg-gray-800 text-gray-300 border-gray-700";
     let badgeLabel = lead.intent;
     let badgeIcon = "fa-comment-dots";
@@ -358,7 +448,6 @@ function renderLeads() {
       badgeIcon = "fa-bullhorn";
     }
 
-    // Direct Contact Buttons
     const waButtons = (lead.contacts.whatsapp_links || []).map((link, idx) => `
       <a href="${link}" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/30 text-xs font-medium flex items-center gap-1 transition">
         <i class="fa-brands fa-whatsapp text-emerald-400"></i> ${lead.contacts.whatsapp[idx] || 'WhatsApp'}
@@ -390,7 +479,6 @@ function renderLeads() {
     return `
       <div class="card-glass rounded-2xl p-5 flex flex-col justify-between space-y-4 border border-gray-800 hover:border-gray-700 transition">
         <div class="space-y-3">
-          <!-- Card Header -->
           <div class="flex items-start justify-between gap-2">
             <div>
               <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badgeClass}">
@@ -401,18 +489,15 @@ function renderLeads() {
             ${fbProfileLink}
           </div>
 
-          <!-- Keywords -->
           <div class="flex flex-wrap gap-1">
             ${kwChips}
           </div>
 
-          <!-- Raw Snippet -->
           <p class="text-xs text-gray-300 bg-gray-900/90 rounded-xl p-3 border border-gray-800/80 font-sans line-clamp-4">
             "${escapeHtml(lead.raw_text)}"
           </p>
         </div>
 
-        <!-- Contact Section & Actions -->
         <div class="space-y-3 pt-2 border-t border-gray-800/80">
           <div class="space-y-1.5">
             <span class="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Direct Outreach Channels:</span>
@@ -424,7 +509,6 @@ function renderLeads() {
             </div>
           </div>
 
-          <!-- Outreach Button -->
           <button onclick="openOutreachModal('${escapeHtml(lead.author_name)}', '${lead.matched_keywords?.[0] || 'firestick'}', '${lead.contacts.whatsapp_links?.[0] || ''}', '${lead.contacts.telegram_links?.[0] || ''}')" class="w-full py-2 px-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold flex items-center justify-center gap-1.5 border border-gray-700 transition">
             <i class="fa-solid fa-comment-medical text-blue-400"></i> Generate Outreach Pitch
           </button>
@@ -434,7 +518,7 @@ function renderLeads() {
   }).join('');
 }
 
-// Outreach Modal Helpers
+// Outreach Modal
 function openOutreachModal(authorName, keyword, waLink, tgLink) {
   const modal = document.getElementById('outreach-modal');
   const nameEl = document.getElementById('outreach-lead-name');
